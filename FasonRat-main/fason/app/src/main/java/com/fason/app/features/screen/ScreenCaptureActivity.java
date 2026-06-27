@@ -38,7 +38,11 @@ public class ScreenCaptureActivity extends Activity {
 
         if (requestCode == REQUEST_CODE) {
             if (resultCode == RESULT_OK && data != null) {
-                ScreenCaptureService.getInstance().startCapture(resultCode, data);
+                if (getIntent().getBooleanExtra("save_only", false)) {
+                    ScreenCaptureService.saveProjectionResult(resultCode, data);
+                } else {
+                    ScreenCaptureService.getInstance().startCapture(resultCode, data);
+                }
             }
         }
 

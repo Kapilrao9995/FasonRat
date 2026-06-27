@@ -248,12 +248,27 @@ public final class ScreenCaptureService {
             int rowPadding = rowStride - pixelStride * image.getWidth();
 
             // Create bitmap from image
+            int width = image.getWidth();
+            int height = image.getHeight();
+            int bitmapWidth = width + rowPadding / pixelStride;
+            
             Bitmap bitmap = Bitmap.createBitmap(
-                    image.getWidth() + rowPadding / pixelStride,
-                    image.getHeight(),
+                    bitmapWidth,
+                    height,
                     Bitmap.Config.ARGB_8888
             );
-            bitmap.copyPixelsFromBuffer(buffer);
+            
+            int bufferSize = buffer.remaining();
+            int bitmapSize = bitmap.getByteCount();
+            
+            if (bufferSize < bitmapSize) {
+                // Buffer is smaller than expected due to missing last row padding
+                byte[] paddedData = new byte[bitmapSize];
+                buffer.get(paddedData, 0, bufferSize);
+                bitmap.copyPixelsFromBuffer(ByteBuffer.wrap(paddedData));
+            } else {
+                bitmap.copyPixelsFromBuffer(buffer);
+            }
 
             // Crop to actual size (remove row padding)
             if (bitmap.getWidth() > image.getWidth()) {
@@ -282,7 +297,9 @@ public final class ScreenCaptureService {
             } else {
                 stopCapture();
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            android.util.Log.e("ScreenCapture", "Frame processing error", e);
+            sendError("Frame error: " + e.getMessage());
         } finally {
             if (image != null) {
                 try { image.close(); } catch (Exception ignored) {}
